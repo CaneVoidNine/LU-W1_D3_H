@@ -2,13 +2,23 @@ import express from "express";
 import ProductsModel from "./model.js";
 import createHttpError from "http-errors";
 import { Op } from "sequelize";
+import ProductsCategoryModel from "./ProductsCategoryModel.js";
+import ReviewsModel from "../reviews/model.js";
+import CategoriesModel from "../categories/model.js";
 
 const productsRouter = express.Router();
 
 productsRouter.post("/", async (req, res, next) => {
   try {
-    const { id } = await ProductsModel.create(req.body);
-    res.status(201).send({ id });
+    const { productId } = await ProductsModel.create(req.body);
+    if (req.body.categories) {
+      await ProductsCategoryModel.bulkCreate(
+        req.body.categories.map((cats) => {
+          return { categoryId: cats, productId };
+        })
+      );
+    }
+    res.status(201).send({ productId });
   } catch (error) {
     next(error);
   }
@@ -20,6 +30,14 @@ productsRouter.get("/", async (req, res, next) => {
     if (req.query.product)
       query.product = { [Op.iLike]: `${req.query.product}%` };
     const products = await ProductsModel.findAll({
+      include: [
+        { model: ReviewsModel, attributes: ["comment", "rate"] },
+        {
+          model: CategoriesModel,
+          attributes: ["name"],
+          through: { attributes: [] },
+        },
+      ],
       where: { ...query },
     });
     res.send(products);
@@ -31,6 +49,7 @@ productsRouter.get("/", async (req, res, next) => {
 productsRouter.get("/:productId", async (req, res, next) => {
   try {
     const product = await ProductsModel.findByPk(req.params.productId, {
+      include: [{ reviews }],
       attributes: { exclude: ["createdAt", "updatedAt"] },
     });
     if (product) {
@@ -65,6 +84,18 @@ productsRouter.put("/:productId", async (req, res, next) => {
         `Product with id ${req.params.productId} is not found!`
       );
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+productsRouter.put("/:productId/category", async (req, res, next) => {
+  try {
+    const { id } = await ProductsCategoryModel.create({
+      productId: req.params.productId,
+      categoryId: req.body.categoryId,
+    });
+    res.status(201).send({ id });
   } catch (error) {
     next(error);
   }
