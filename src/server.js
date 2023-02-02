@@ -5,7 +5,9 @@ import listEndpoints from "express-list-endpoints";
 import cors from "cors";
 import { pgConnect, syncModels } from "./db.js";
 import productsRouter from "./api/products/index.js";
-
+import categoriesRouter from "./api/categories/index.js";
+import usersRouter from "./api/users/index.js";
+import reviewRouter from "./api/reviews/index.js";
 import {
   badRequestErrorHandler,
   unauthorizedErrorHandler,
@@ -20,6 +22,9 @@ server.use(cors());
 server.use(express.json());
 
 server.use("/products", productsRouter);
+server.use("/categories", categoriesRouter);
+server.use("/users", usersRouter);
+server.use("/review", reviewRouter);
 
 server.use(badRequestErrorHandler);
 server.use(unauthorizedErrorHandler);
